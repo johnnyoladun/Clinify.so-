@@ -2,89 +2,120 @@
 
 import { 
   LayoutDashboard, 
-  LifeBuoy, 
   BarChart3, 
-  FolderKanban, 
   Users, 
-  FileText, 
-  FileBarChart, 
-  FileQuestion,
-  MoreHorizontal,
-  Mail,
-  CircleDot
+  Building2,
+  UserCircle,
+  LogOut
 } from "lucide-react"
+import Image from "next/image"
 import { Button } from "./ui/button"
-
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", active: true },
-  { icon: LifeBuoy, label: "Lifecycle" },
-  { icon: BarChart3, label: "Analytics" },
-  { icon: FolderKanban, label: "Projects" },
-  { icon: Users, label: "Team" },
-]
-
-const documentItems = [
-  { icon: FileText, label: "Data Library" },
-  { icon: FileBarChart, label: "Reports" },
-  { icon: FileQuestion, label: "Word Assistant" },
-  { icon: MoreHorizontal, label: "More" },
-]
+import { useAuth } from "@/lib/contexts/auth-context"
+import { useRouter, usePathname } from "next/navigation"
 
 export function Sidebar() {
+  const { user, isAdmin, logout } = useAuth()
+  const router = useRouter()
+  const pathname = usePathname()
+  
+  const handleLogout = async () => {
+    await logout()
+    router.push('/login')
+  }
+
   return (
     <div className="flex h-screen w-64 flex-col border-r border-border bg-black px-3 py-4">
       {/* Logo/Brand */}
       <div className="mb-6 flex items-center gap-2 px-3">
-        <CircleDot className="h-6 w-6" />
-        <span className="text-lg font-semibold">Acme Inc.</span>
+        <Image 
+          src="/images/clinify-logo.png" 
+          alt="Clinify Logo" 
+          width={24} 
+          height={24}
+          className="h-6 w-6 object-contain"
+        />
+        <span className="text-lg font-semibold">Clinify Dashboard</span>
       </div>
-
-      {/* Quick Create Button */}
-      <Button 
-        variant="default" 
-        className="mb-6 w-full justify-start gap-2 bg-white text-black hover:bg-gray-200"
-      >
-        <CircleDot className="h-4 w-4" />
-        Quick Create
-      </Button>
-
-      {/* Mail Icon Button */}
-      <Button variant="ghost" size="icon" className="mb-6 ml-auto">
-        <Mail className="h-5 w-5" />
-      </Button>
 
       {/* Main Navigation */}
       <nav className="flex-1 space-y-1">
-        {navItems.map((item) => (
-          <Button
-            key={item.label}
-            variant="ghost"
-            className={`w-full justify-start gap-3 ${
-              item.active ? "bg-accent" : ""
-            }`}
-          >
-            <item.icon className="h-5 w-5" />
-            {item.label}
-          </Button>
-        ))}
+        <Button
+          variant="ghost"
+          className={`w-full justify-start gap-3 ${
+            pathname === '/' ? "bg-accent" : ""
+          }`}
+          onClick={() => router.push('/')}
+        >
+          <LayoutDashboard className="h-5 w-5" />
+          Dashboard
+        </Button>
+        <Button
+          variant="ghost"
+          className={`w-full justify-start gap-3 ${
+            pathname === '/analytics' ? "bg-accent" : ""
+          }`}
+          onClick={() => router.push('/analytics')}
+        >
+          <BarChart3 className="h-5 w-5" />
+          Analytics
+        </Button>
 
-        {/* Documents Section */}
-        <div className="pt-6">
-          <h3 className="mb-2 px-3 text-sm font-medium text-muted-foreground">
-            Documents
-          </h3>
-          {documentItems.map((item) => (
+        {/* Control Centre Section - Admin Only */}
+        {isAdmin() && (
+          <div className="pt-6">
+            <h3 className="mb-2 px-3 text-sm font-medium text-muted-foreground">
+              Control Centre
+            </h3>
             <Button
-              key={item.label}
               variant="ghost"
-              className="w-full justify-start gap-3"
+              className={`w-full justify-start gap-3 ${
+                pathname?.startsWith('/admin/organisations') ? "bg-accent" : ""
+              }`}
+              onClick={() => router.push('/admin/organisations')}
             >
-              <item.icon className="h-5 w-5" />
-              {item.label}
+              <Building2 className="h-5 w-5" />
+              Organisations
             </Button>
-          ))}
-        </div>
+            <Button
+              variant="ghost"
+              className={`w-full justify-start gap-3 ${
+                pathname?.startsWith('/admin/users') ? "bg-accent" : ""
+              }`}
+              onClick={() => router.push('/admin/users')}
+            >
+              <Users className="h-5 w-5" />
+              Users
+            </Button>
+          </div>
+        )}
+
       </nav>
+
+      {/* Profile & Logout */}
+      <div className="border-t border-border pt-4 space-y-1">
+        <Button
+          variant="ghost"
+          className={`w-full justify-start gap-3 ${
+            pathname === '/profile' ? "bg-accent" : ""
+          }`}
+          onClick={() => router.push('/profile')}
+        >
+          <UserCircle className="h-5 w-5" />
+          <div className="flex flex-col items-start">
+            <span className="text-sm font-medium">{user?.full_name || 'User'}</span>
+            <span className="text-xs text-muted-foreground">View Profile</span>
+          </div>
+        </Button>
+        
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="text-sm font-medium">Logout</span>
+        </Button>
+      </div>
     </div>
   )
 }
