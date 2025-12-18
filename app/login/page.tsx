@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useAuth } from '@/lib/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { LoadingSpinner } from '@/components/loading-spinner'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -92,9 +93,10 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full bg-white text-black hover:bg-gray-200"
+              className="w-full bg-white text-black hover:bg-gray-200 flex items-center justify-center gap-2"
               disabled={loading}
             >
+              {loading && <LoadingSpinner size="sm" />}
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>

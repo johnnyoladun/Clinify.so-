@@ -9,7 +9,8 @@ import { useAuth } from "@/lib/contexts/auth-context"
 import { Section21Patient } from "@/lib/types/database"
 import { DocumentViewerModal } from "@/components/document-viewer-modal"
 import { NotificationCentre } from "@/components/notification-centre"
-import { PanelLeft, LogOut, FileText, Search, RefreshCw, Filter, Bell } from "lucide-react"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import { PanelLeft, LogOut, FileText, Search, RefreshCw, Filter, Bell, Download } from "lucide-react"
 
 export default function Dashboard() {
   const { user, loading: authLoading, logout } = useAuth()
@@ -198,14 +199,8 @@ export default function Dashboard() {
       if (response.ok) {
         const data = await response.json()
         console.log('Patients received:', data.data?.length || 0)
+        // All patients have complete documents - sort alphabetically by name
         const patientData = (data.data || []).sort((a: Section21Patient, b: Section21Patient) => {
-          // Sort by S21 doc first - patients with doc come first
-          const aHasDoc = a.outcome_letter_url ? 1 : 0
-          const bHasDoc = b.outcome_letter_url ? 1 : 0
-          if (bHasDoc !== aHasDoc) {
-            return bHasDoc - aHasDoc
-          }
-          // Then sort alphabetically by name
           return (a.patient_full_name || '').localeCompare(b.patient_full_name || '')
         })
         setAllPatients(patientData)
@@ -254,13 +249,8 @@ export default function Dashboard() {
       })
     }
     
-    // Keep S21 sort order
+    // Sort alphabetically - all patients have complete documents
     setPatients(filtered.sort((a, b) => {
-      const aHasDoc = a.outcome_letter_url ? 1 : 0
-      const bHasDoc = b.outcome_letter_url ? 1 : 0
-      if (bHasDoc !== aHasDoc) {
-        return bHasDoc - aHasDoc
-      }
       return (a.patient_full_name || '').localeCompare(b.patient_full_name || '')
     }))
   }
@@ -306,10 +296,41 @@ export default function Dashboard() {
     return patient.locations?.name || '-'
   }
 
+  const handleExportCSV = async () => {
+    try {
+      const response = await fetch('/api/patients/export', {
+        credentials: 'include'
+      })
+      
+      if (!response.ok) {
+        setError('Failed to export data')
+        return
+      }
+      
+      // Create a blob from the response
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      
+      // Create a temporary link and trigger download
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `section21_patients_${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(link)
+      link.click()
+      
+      // Cleanup
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Export error:', err)
+      setError('Failed to export data')
+    }
+  }
+
   if (authLoading || !user) {
     return (
       <div className="flex h-screen items-center justify-center bg-black">
-        <p className="text-muted-foreground">Loading...</p>
+        <LoadingSpinner size="lg" />
       </div>
     )
   }
@@ -429,13 +450,23 @@ export default function Dashboard() {
                         <option key={`${loc.id}-${index}`} value={loc.name}>{loc.name}</option>
                       ))}
                   </select>
+                  
+                  {/* Export CSV Button */}
+                  <Button
+                    onClick={handleExportCSV}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    disabled={allPatients.length === 0}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="flex h-64 items-center justify-center">
-                  <p className="text-muted-foreground">Loading patients...</p>
+                  <LoadingSpinner />
                 </div>
               ) : patients.length === 0 ? (
                 <div className="flex h-64 items-center justify-center">
@@ -478,11 +509,11 @@ export default function Dashboard() {
                           <td className="px-4 py-3 text-sm font-medium w-[180px] truncate" title={orgName}>{orgName}</td>
                           <td className="px-4 py-3 text-sm w-[150px] truncate" title={locName}>{locName}</td>
                           <td className="px-4 py-3">
-                            <div className="flex gap-3">
+                            <div className="flex flex-wrap gap-5">
                               {patient.patient_id_document_url && (
                                 <button
                                   onClick={() => openDocument(patient.patient_id_document_url!, 'ID Doc - ' + patient.patient_full_name)}
-                                  className="rounded-md bg-yellow-500/10 px-3 py-1.5 text-xs font-medium text-yellow-400 hover:bg-yellow-500/20"
+                                  className="rounded-md bg-yellow-500/10 px-2.5 py-1.5 text-xs font-medium text-yellow-400 hover:bg-yellow-500/20 whitespace-nowrap"
                                 >
                                   ID Doc
                                 </button>
@@ -490,7 +521,7 @@ export default function Dashboard() {
                               {patient.dr_script_url && (
                                 <button
                                   onClick={() => openDocument(patient.dr_script_url!, "Dr's Script - " + patient.patient_full_name)}
-                                  className="rounded-md bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-400 hover:bg-green-500/20"
+                                  className="rounded-md bg-green-500/10 px-2.5 py-1.5 text-xs font-medium text-green-400 hover:bg-green-500/20 whitespace-nowrap"
                                 >
                                   Dr's Script
                                 </button>
@@ -498,7 +529,7 @@ export default function Dashboard() {
                               {patient.outcome_letter_url && (
                                 <button
                                   onClick={() => openDocument(patient.outcome_letter_url!, 'Section 21 Doc - ' + patient.patient_full_name)}
-                                  className="rounded-md bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-blue-400 hover:bg-blue-500/20"
+                                  className="rounded-md bg-blue-500/10 px-2.5 py-1.5 text-xs font-medium text-blue-400 hover:bg-blue-500/20 whitespace-nowrap"
                                 >
                                   Section 21 Doc
                                 </button>

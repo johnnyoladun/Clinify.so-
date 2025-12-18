@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
     
     const status = searchParams.get('status') // 'expiring_soon', 'expired', or 'all'
 
-    // Fetch all patients with Section 21 outcome letters
+    // 🔐 CRITICAL: Fetch ONLY patients with ALL 3 required documents
+    // Notifications only apply to complete patient records
     const { data: patients, error: dbError } = await supabase
       .from('section21_patients')
       .select(`
@@ -41,6 +42,8 @@ export async function GET(request: NextRequest) {
         organisations(id, name),
         locations(id, name)
       `)
+      .not('patient_id_document_url', 'is', null)
+      .not('dr_script_url', 'is', null)
       .not('outcome_letter_url', 'is', null)
       .limit(1000000)
 

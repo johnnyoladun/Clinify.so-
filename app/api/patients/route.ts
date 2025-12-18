@@ -62,6 +62,13 @@ export async function GET(request: NextRequest) {
 
     // Exclude patients from non-patient forms
     query = query.not('form_id', 'in', `(${EXCLUDED_FORM_IDS.join(',')})`)
+    
+    // 🔐 CRITICAL: Only show patients with ALL 3 required documents
+    // This ensures no incomplete patient data is visible on the dashboard
+    query = query
+      .not('patient_id_document_url', 'is', null)
+      .not('dr_script_url', 'is', null)
+      .not('outcome_letter_url', 'is', null)
 
     // Filter by assigned GMPs if user is not admin
     if (user!.role !== 'admin' && user!.assigned_gmp_ids) {
